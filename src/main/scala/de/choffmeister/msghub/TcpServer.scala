@@ -19,6 +19,7 @@ class TcpServer(bind: InetSocketAddress, handler: ActorRef ⇒ Props) extends Ac
       context.stop(self)
 
     case Connected(remote, local) ⇒
+      log.debug("New connection from {}", remote)
       val connection = sender()
       context.actorOf(handler(connection))
   }
