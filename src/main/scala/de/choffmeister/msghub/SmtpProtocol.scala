@@ -39,10 +39,12 @@ object SmtpProtocol {
     val message: String
   }
 
+  case class RawCommand(code: String, message: String) extends Command
+
   object Command {
-    def apply(reply: Reply): ByteString = {
-      if (reply.message.length > 0) ByteString(reply.code + " " + reply.message + "\r\n")
-      else ByteString(reply.code + "\r\n")
+    def apply(command: Command): ByteString = {
+      if (command.message.length > 0) ByteString(command.code + " " + command.message + "\r\n")
+      else ByteString(command.code + "\r\n")
     }
 
     def unapply(raw: ByteString): Option[(String, String)] = extractCode(raw) match {
