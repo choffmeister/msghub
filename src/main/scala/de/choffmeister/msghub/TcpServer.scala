@@ -6,7 +6,7 @@ import akka.actor._
 import akka.io.Tcp._
 import akka.io._
 
-class TcpServer(bind: InetSocketAddress, handler: ActorRef => Props) extends Actor with ActorLogging {
+class TcpServer(bind: InetSocketAddress, handler: ActorRef ⇒ Props) extends Actor with ActorLogging {
   implicit val system = context.system
   IO(Tcp) ! Bind(self, bind)
 
