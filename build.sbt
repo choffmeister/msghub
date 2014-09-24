@@ -14,6 +14,7 @@ libraryDependencies ++= {
   val akkaVersion = "2.3.5"
   val dependencies = Seq(
     "ch.qos.logback" % "logback-classic" % "1.0.13",
+    "dnsjava" % "dnsjava" % "2.1.6",
     "com.typesafe" % "config" % "1.2.0",
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
