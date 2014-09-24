@@ -4,7 +4,7 @@ import akka.util.ByteString
 import org.specs2.mutable.Specification
 
 class SmtpProtocolSpec extends Specification {
-  import SmtpProtocol._
+  import de.choffmeister.msghub.SmtpProtocol._
 
   "SmtpProtocol" should {
     "apply to ByteString" in {
