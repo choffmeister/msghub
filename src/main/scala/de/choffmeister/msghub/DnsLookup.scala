@@ -12,8 +12,8 @@ object DnsLookup {
     future(lookup(domain, Type.A).map(_.asInstanceOf[ARecord]).headOption)
 
   def MXwithA(domain: String)(implicit ec: ExecutionContext): Future[List[(MXRecord, Option[ARecord])]] =
-    MX(domain).map(mxs => mxs.sortBy(mx => mx.getPriority)).flatMap { mxs =>
-      Future.sequence(mxs.map(mx => DnsLookup.A(mx.getTarget.toString).map(a => (mx, a))))
+    MX(domain).map(mxs ⇒ mxs.sortBy(mx ⇒ mx.getPriority)).flatMap { mxs ⇒
+      Future.sequence(mxs.map(mx ⇒ DnsLookup.A(mx.getTarget.toString).map(a ⇒ (mx, a))))
     }
 
   private def lookup(name: String, `type`: Int): List[Record] = new Lookup(name, `type`).run.toList
