@@ -3,12 +3,11 @@ package de.choffmeister.msghub
 import java.net.InetSocketAddress
 
 import akka.actor._
-import akka.io._
 import akka.io.Tcp._
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 
-object SmtpServerHandler {
+object SmtpServer {
   sealed trait State
   case object State0 extends State
   case object State1 extends State
@@ -20,14 +19,25 @@ object SmtpServerHandler {
   sealed trait Data
   case object Empty extends Data
   case class Envelope(from: Option[String] = None, to: List[String] = Nil, body: ByteString = ByteString.empty) extends Data
+
+  case class Config(bind: InetSocketAddress, banner: String)
+  object Config {
+    def load(): Config = {
+      val raw = ConfigFactory.load("application").getConfig("smtp.server")
+      Config(
+        bind = new InetSocketAddress(raw.getString("interface"), raw.getInt("port")),
+        banner = raw.getString("banner")
+      )
+    }
+  }
 }
 
 /**
  * See http://tools.ietf.org/html/rfc5321
  */
-class SmtpServerHandler(connection: ActorRef, config: SmtpServerConfig) extends FSM[SmtpServerHandler.State, SmtpServerHandler.Data] {
-  import SmtpServerHandler._
-  import SmtpProtocol._
+class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[SmtpServer.State, SmtpServer.Data] {
+  import de.choffmeister.msghub.SmtpProtocol._
+  import de.choffmeister.msghub.SmtpServer._
 
   connection ! Register(self)
   self ! Register(self)
@@ -142,37 +152,5 @@ class SmtpServerHandler(connection: ActorRef, config: SmtpServerConfig) extends 
     log.info("From {}", envelope.from)
     log.info("To {}", envelope.to)
     log.info("Body\n{}", envelope.body.utf8String)
-  }
-}
-
-class SmtpServer(config: SmtpServerConfig = SmtpServerConfig.load()) extends Actor with ActorLogging {
-  implicit val system = context.system
-  IO(Tcp) ! Bind(self, config.bind)
-
-  def receive = {
-    case Bound(local) ⇒
-      log.debug("Bound to {}", local)
-
-    case CommandFailed(_: Bind) ⇒
-      log.error("Unable to bind to {}", config.bind)
-      context.stop(self)
-
-    case Connected(remote, local) ⇒
-      val connection = sender()
-      val handler = context.actorOf(Props(new SmtpServerHandler(connection, config)))
-  }
-}
-
-case class SmtpServerConfig(
-  bind: InetSocketAddress,
-  banner: String)
-
-object SmtpServerConfig {
-  def load(): SmtpServerConfig = {
-    val raw = ConfigFactory.load("application").getConfig("smtp.server")
-    SmtpServerConfig(
-      bind = new InetSocketAddress(raw.getString("interface"), raw.getInt("port")),
-      banner = raw.getString("banner")
-    )
   }
 }
