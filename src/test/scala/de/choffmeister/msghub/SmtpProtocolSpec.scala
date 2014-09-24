@@ -8,8 +8,8 @@ class SmtpProtocolSpec extends Specification {
 
   "SmtpProtocol" should {
     "apply to ByteString" in {
-      Reply.apply(RawReply(200, "")) === ByteString("200\r\n")
-      Reply.apply(RawReply(200, "Hello World")) === ByteString("200 Hello World\r\n")
+      Reply.apply(200, "") === ByteString("200\r\n")
+      Reply.apply(200, "Hello World") === ByteString("200 Hello World\r\n")
     }
 
     "unapply from ByteString" in {

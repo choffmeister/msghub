@@ -143,7 +143,7 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
   startWith(State1, Empty)
   initialize()
 
-  def reply(code: Int, message: String = "") = connection ! Write(Reply(RawReply(code, message)))
+  def reply(code: Int, message: String = "") = connection ! Write(Reply(code, message))
   def replyOk(message: String = "OK") = reply(250, message)
   def replyError(message: String = "Error") = reply(500, message)
 

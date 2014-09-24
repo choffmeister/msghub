@@ -62,5 +62,5 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   startWith(State1, Empty)
   initialize()
 
-  def command(code: String, message: String = "") = connection ! Write(Command(RawCommand(code, message)))
+  def command(code: String, message: String = "") = connection ! Write(Command(code, message))
 }
