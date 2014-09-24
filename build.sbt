@@ -29,6 +29,8 @@ packSettings
 
 packMain := Map("msghub" -> "de.choffmeister.msghub.Application")
 
+packExtraClasspath := Map("msghub" -> Seq("${PROG_HOME}/config"))
+
 scalariformSettings
 
 ScalariformKeys.preferences := ScalariformKeys.preferences.value

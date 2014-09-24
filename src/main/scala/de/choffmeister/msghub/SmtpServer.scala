@@ -6,6 +6,7 @@ import akka.actor._
 import akka.io._
 import akka.io.Tcp._
 import akka.util.ByteString
+import com.typesafe.config.ConfigFactory
 
 object SmtpServerHandler {
   sealed trait State
@@ -24,7 +25,7 @@ object SmtpServerHandler {
 /**
  * See http://tools.ietf.org/html/rfc5321
  */
-class SmtpServerHandler(connection: ActorRef) extends FSM[SmtpServerHandler.State, SmtpServerHandler.Data] {
+class SmtpServerHandler(connection: ActorRef, config: SmtpServerConfig) extends FSM[SmtpServerHandler.State, SmtpServerHandler.Data] {
   import SmtpServerHandler._
   import SmtpProtocol._
 
@@ -144,20 +145,34 @@ class SmtpServerHandler(connection: ActorRef) extends FSM[SmtpServerHandler.Stat
   }
 }
 
-class SmtpServer(localAddress: String, port: Int) extends Actor with ActorLogging {
+class SmtpServer(config: SmtpServerConfig = SmtpServerConfig.load()) extends Actor with ActorLogging {
   implicit val system = context.system
-  IO(Tcp) ! Bind(self, new InetSocketAddress(port))
+  IO(Tcp) ! Bind(self, config.bind)
 
   def receive = {
     case Bound(local) ⇒
       log.debug("Bound to {}", local)
 
     case CommandFailed(_: Bind) ⇒
-      log.error("Unable to bind to {}", localAddress)
+      log.error("Unable to bind to {}", config.bind)
       context.stop(self)
 
     case Connected(remote, local) ⇒
       val connection = sender()
-      val handler = context.actorOf(Props(new SmtpServerHandler(connection)))
+      val handler = context.actorOf(Props(new SmtpServerHandler(connection, config)))
+  }
+}
+
+case class SmtpServerConfig(
+  bind: InetSocketAddress,
+  banner: String)
+
+object SmtpServerConfig {
+  def load(): SmtpServerConfig = {
+    val raw = ConfigFactory.load("application").getConfig("smtp.server")
+    SmtpServerConfig(
+      bind = new InetSocketAddress(raw.getString("interface"), raw.getInt("port")),
+      banner = raw.getString("banner")
+    )
   }
 }

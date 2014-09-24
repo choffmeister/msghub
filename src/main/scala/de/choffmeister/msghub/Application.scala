@@ -9,7 +9,8 @@ class Application extends Bootable {
   implicit val executor = system.dispatcher
 
   def startup() = {
-    val smtpServer = system.actorOf(Props(new SmtpServer("0.0.0.0", 2525)), "smtpserver")
+    val smtpServerConfig = SmtpServerConfig.load()
+    val smtpServer = system.actorOf(Props(new SmtpServer()), "smtpserver")
   }
 
   def shutdown() = {
