@@ -39,14 +39,14 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
   import de.choffmeister.msghub.SmtpProtocol._
   import de.choffmeister.msghub.SmtpServer._
 
-  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline)
+  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline("SERVER"))
   private var adapter = context.actorOf(Props(new TcpPipelineAdapter(connection, self, pipeline)))
   connection ! Register(adapter)
   self ! Register(self)
 
   when(State0) {
-    case Event(e, s) ⇒
-      replyError()
+    case Event(Closed, _) ⇒
+      context.stop(self)
       stay()
   }
 

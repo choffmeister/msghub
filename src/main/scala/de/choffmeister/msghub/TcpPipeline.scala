@@ -19,14 +19,14 @@ object PassthroughTcpPipeline extends TcpPipeline {
   def outbound(bytes: ByteString) = bytes :: Nil
 }
 
-class LoggingTcpPipeline extends TcpPipeline {
+class LoggingTcpPipeline(name: String) extends TcpPipeline {
   def inbound(bytes: ByteString) = {
-    print(">>> " + bytes.utf8String)
+    print(s">>> [$name] ${bytes.utf8String}")
     bytes :: Nil
   }
 
   def outbound(bytes: ByteString) = {
-    print("<<< " + bytes.utf8String)
+    print(s"<<< [$name] ${bytes.utf8String}")
     bytes :: Nil
   }
 }

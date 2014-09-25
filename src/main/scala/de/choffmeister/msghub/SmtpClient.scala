@@ -15,6 +15,7 @@ object SmtpClient {
   case object State3 extends State
   case object State4 extends State
   case object State5 extends State
+  case object State6 extends State
 
   sealed trait Data
   case object Empty extends Data
@@ -28,7 +29,7 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   import de.choffmeister.msghub.SmtpProtocol._
   import de.choffmeister.msghub.SmtpClient._
 
-  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline)
+  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline("CLIENT"))
   private var adapter = context.actorOf(Props(new TcpPipelineAdapter(connection, self, pipeline)))
   connection ! Register(adapter)
 
@@ -46,6 +47,38 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
 
   when(State2) {
     case Event(Received(Reply(250, _)), _) ⇒
+      command("MAIL", "FROM:<user1@domain.com>")
+      goto(State3)
+  }
+
+  when(State3) {
+    case Event(Received(Reply(250, _)), _) ⇒
+      command("RCPT", "TO:<user2@domain.com>")
+      goto(State4)
+  }
+
+  when(State4) {
+    case Event(Received(Reply(250, _)), _) ⇒
+      command("DATA")
+      goto(State5)
+  }
+
+  when(State4) {
+    case Event(Received(Reply(250, _)), _) ⇒
+      command("DATA")
+      goto(State5)
+  }
+
+  when(State5) {
+    case Event(Received(Reply(354, _)), _) ⇒
+      adapter ! Write(ByteString("Hello\r"))
+      adapter ! Write(ByteString("\nWorld\r\n.\r"))
+      adapter ! Write(ByteString("\n"))
+      goto(State6)
+  }
+
+  when(State6) {
+    case Event(Received(Reply(250, _)), _) ⇒
       command("QUIT")
       goto(State0)
   }
@@ -58,7 +91,8 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
 
     case Event(e, s) ⇒
       log.warning("received unhandled request {} in state {}/{}", e, stateName, s)
-      stay()
+      command("QUIT")
+      goto(State0)
   }
 
   startWith(State1, Empty)
