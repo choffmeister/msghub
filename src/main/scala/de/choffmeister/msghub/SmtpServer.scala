@@ -44,11 +44,7 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
   connection ! Register(adapter)
   self ! Register(self)
 
-  when(State0) {
-    case Event(Closed, _) ⇒
-      context.stop(self)
-      stay()
-  }
+  when(State0)(PartialFunction.empty)
 
   when(State1) {
     case Event(Register(_, _, _), _) ⇒

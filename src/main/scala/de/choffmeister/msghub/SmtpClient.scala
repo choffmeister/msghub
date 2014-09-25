@@ -1,11 +1,8 @@
 package de.choffmeister.msghub
 
-import java.net.InetSocketAddress
-
 import akka.actor._
 import akka.io.Tcp._
 import akka.util.ByteString
-import com.typesafe.config.ConfigFactory
 
 object SmtpClient {
   sealed trait State
@@ -16,6 +13,7 @@ object SmtpClient {
   case object State4 extends State
   case object State5 extends State
   case object State6 extends State
+  case object State7 extends State
 
   sealed trait Data
   case object Empty extends Data
@@ -33,11 +31,7 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   private var adapter = context.actorOf(Props(new TcpPipelineAdapter(connection, self, pipeline)))
   connection ! Register(adapter)
 
-  when(State0) {
-    case Event(Received(Reply(221, _)), _) ⇒
-      adapter ! Close
-      goto(State0)
-  }
+  when(State0)(PartialFunction.empty)
 
   when(State1) {
     case Event(Received(Reply(220, remoteName)), _) ⇒
@@ -80,6 +74,12 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   when(State6) {
     case Event(Received(Reply(250, _)), _) ⇒
       command("QUIT")
+      goto(State7)
+  }
+
+  when(State7) {
+    case Event(Received(Reply(221, _)), _) ⇒
+      adapter ! Close
       goto(State0)
   }
 
@@ -92,7 +92,7 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
     case Event(e, s) ⇒
       log.warning("received unhandled request {} in state {}/{}", e, stateName, s)
       command("QUIT")
-      goto(State0)
+      goto(State7)
   }
 
   startWith(State1, Empty)
