@@ -28,11 +28,13 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   import de.choffmeister.msghub.SmtpProtocol._
   import de.choffmeister.msghub.SmtpClient._
 
-  connection ! Register(self)
+  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline)
+  private var adapter = context.actorOf(Props(new TcpPipelineAdapter(connection, self, pipeline)))
+  connection ! Register(adapter)
 
   when(State0) {
     case Event(Received(Reply(221, _)), _) ⇒
-      connection ! Close
+      adapter ! Close
       goto(State0)
   }
 
@@ -62,5 +64,5 @@ class SmtpClient(connection: ActorRef) extends FSM[SmtpClient.State, SmtpClient.
   startWith(State1, Empty)
   initialize()
 
-  def command(code: String, message: String = "") = connection ! Write(Command(code, message))
+  def command(code: String, message: String = "") = adapter ! Write(Command(code, message))
 }

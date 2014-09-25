@@ -39,7 +39,9 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
   import de.choffmeister.msghub.SmtpProtocol._
   import de.choffmeister.msghub.SmtpServer._
 
-  connection ! Register(self)
+  private var pipeline = new DelimitedTcpPipeline(ByteString("\r\n")).compose(new LoggingTcpPipeline)
+  private var adapter = context.actorOf(Props(new TcpPipelineAdapter(connection, self, pipeline)))
+  connection ! Register(adapter)
   self ! Register(self)
 
   when(State0) {
@@ -92,11 +94,6 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
 
   // http://tools.ietf.org/html/rfc5321#section-4.1.1.4
   when(State5) {
-    case Event(Received(raw), envelope: Envelope) if raw.endsWith(ByteString("\r\n.\r\n")) ⇒
-      val result = envelope.copy(body = envelope.body ++ raw.take(raw.length - 5))
-      logMail(result)
-      replyOk()
-      goto(State3) using Empty
     case Event(Received(raw), envelope: Envelope) if raw == ByteString(".\r\n") ⇒
       val result = envelope
       logMail(result)
@@ -126,7 +123,7 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
     // http://tools.ietf.org/html/rfc5321#section-4.1.1.10
     case Event(Received(Command("QUIT", _)), _) ⇒
       reply(221, "OK")
-      connection ! Close
+      adapter ! Close
       goto(State0)
 
     case Event(_: ConnectionClosed, _) ⇒
@@ -143,7 +140,7 @@ class SmtpServer(connection: ActorRef, config: SmtpServer.Config) extends FSM[Sm
   startWith(State1, Empty)
   initialize()
 
-  def reply(code: Int, message: String = "") = connection ! Write(Reply(code, message))
+  def reply(code: Int, message: String = "") = adapter ! Write(Reply(code, message))
   def replyOk(message: String = "OK") = reply(250, message)
   def replyError(message: String = "Error") = reply(500, message)
 
